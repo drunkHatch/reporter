@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <dirent.h>
 #include <string.h>
-#include <sys/types.h>
+//#include <sys/types.h>
 
 void change_reporter(){
     DIR *dir;
@@ -36,6 +36,7 @@ static void sig_handler(int signo){
     if (signo == SIGINT){
         system("date");
         change_reporter();
+				exit(1);
     }
     if (signo == SIGALRM){
         system("date");
@@ -64,8 +65,8 @@ int main(void)
 
     while(1)
     {
-        alarm(1);
-        sleep(1);
+        alarm(3);
+        sleep(3);
 		}
     return 0;
 }
