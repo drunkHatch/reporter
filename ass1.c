@@ -5,7 +5,26 @@
 #include <stdlib.h>
 #include <dirent.h>
 #include <string.h>
-//#include <sys/types.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <fcntl.h> //optional
+// inode -> change name, modify 1231412
+/*
+filename, type, time, inode
+if delete and create same file:
+stay the same:
+filename -> same?
+diff:
+filename + inode -> same?
+type&time -> sign
+
+struct name,type,time
+struct name,type,time,inode
+*/
+
+int fstat(int fd, struct stat *statbuf);
 
 void change_reporter(){
     DIR *dir;
@@ -54,11 +73,6 @@ static void sig_handler(int signo){
 
 int main(void)
 {
-    //struct sigaction sigaction_usr;
-    //sigaction_usr.sa_flags = 0;
-    //sigaction_usr.sa_handler = sig_handler;
-
-
 		signal(SIGALRM, sig_handler);
 
 		signal(SIGINT, sig_handler);
