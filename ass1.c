@@ -62,6 +62,8 @@ int main(void)
 		signal(SIGALRM, sig_handler);
 
 		signal(SIGINT, sig_handler);
+		system("date");
+		change_reporter();
 
     while(1)
     {
