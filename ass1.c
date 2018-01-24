@@ -10,6 +10,24 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <fcntl.h> //optional
+#include <sys/inotify.h>
+#include <inttypes.h>
+
+#include <cstdio>
+#include <signal.h>
+#include <limits.h>
+#include <sys/inotify.h>
+#include <fcntl.h>
+#include <iostream>
+#include <fstream>
+#include <string>
+
+#include <sys/inotify.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <inttypes.h>
 // inode -> change name, modify 1231412
 /*
 filename, type, time, inode
@@ -23,6 +41,16 @@ type&time -> sign
 struct name,type,time
 struct name,type,time,inode
 */
+
+#define EVENT_SIZE  ( sizeof (struct inotify_event) )
+#define EVENT_BUF_LEN     ( 1024 * ( EVENT_SIZE + 16 ) )
+
+int length, i = 0;
+int fd;
+int wd;
+char buffer[EVENT_BUF_LEN];
+//FD_ZERO(&inputs)
+//FD_SET(fd,&inputs);
 
 int fstat(int fd, struct stat *statbuf);
 
@@ -50,21 +78,98 @@ void change_reporter(){
 		closedir(dir);
 }
 
+void reporter(){
+  int check;
+
+  // result = select(FD_SETSIZE, &testfds, (fd_set *)0, (fd_set *)0, (struct timeval *) 0);
+
+  check = select()
+  length = read( fd, buffer, EVENT_BUF_LEN);
+  printf("%d\n", length);
+  /*checking for error*/
+  if ( length < 0 ) {
+    perror( "read" );
+  }
+
+  /*actually read return the list of change events happens. Here, read the change event one by one and process it accordingly.*/
+  while ( i < length ) {struct inotify_event *event = ( struct inotify_event * ) &buffer[ i ];     if ( event->len ) {
+      if ( event->mask & IN_CREATE ) {
+        if ( event->mask & IN_ISDIR ) {
+          printf( "New directory %s created.\n", event->name );
+        }
+        else {
+          printf( "New file %s created.\n", event->name );
+        }
+      }
+      else if ( event->mask & IN_DELETE ) {
+        if ( event->mask & IN_ISDIR ) {
+          printf( "Directory %s deleted.\n", event->name );
+        }
+        else {
+          printf( "File %s deleted.\n", event->name );
+        }
+      }
+      else if ( event->mask & IN_MODIFY ) {
+        if ( event->mask & IN_ISDIR ) {
+          printf( "Directory %s modified.\n", event->name );
+        }
+        else {
+          printf( "File %s modified.\n", event->name );
+        }
+      }
+      else if ( event->mask & IN_ATTRIB ) {
+        printf( "cookie: %" PRIu32 " !!\n", event->cookie );
+        if ( event->mask & IN_ISDIR ) {
+          printf( "* %s .\n", event->name );
+        }
+        else {
+          printf( "* %s .\n", event->name );
+        }
+      }
+      else if ( event->mask & IN_MOVED_FROM ) {
+        printf( "cookie: %" PRIu32 " !!\n", event->cookie );
+        if ( event->mask & IN_ISDIR ) {
+          printf( "IN_MOVED_FROM %s .\n", event->name );
+        }
+        else {
+          printf( "IN_MOVED_FROM %s .\n", event->name );
+        }
+      }
+      else if ( event->mask & IN_MOVED_TO ) {
+        printf( "cookie: %" PRIu32 " !!\n", event->cookie );
+
+        if ( event->mask & IN_ISDIR ) {
+          printf( "IN_MOVED_TO %s .\n", event->name );
+        }
+        else {
+          printf( "IN_MOVED_TO %s .\n", event->name );
+        }
+      }
+    }
+    i += EVENT_SIZE + event->len;
+  }
+  /*removing the “/tmp” directory from the watch list.*/
+   inotify_rm_watch( fd, wd );
+
+
+  /*closing the INOTIFY instance*/
+   close( fd );
+}
 static void sig_handler(int signo){
 
     if (signo == SIGINT){
         system("date");
-        change_reporter();
+        //reporter();
 				exit(1);
     }
     else if (signo == SIGALRM){
         system("date");
-        change_reporter();
+        reporter();
 				signal (SIGALRM, sig_handler);
     }
     else if (signo == SIGUSR1){
         system("date");
-        change_reporter();
+        //reporter();
         signal(SIGUSR1, sig_handler);
     }
 		/*reset handler reason
@@ -82,12 +187,23 @@ int main(void)
     signal(SIGUSR1, sig_handler);
 		signal(SIGINT, sig_handler);
 		system("date");
-		change_reporter();
+		//change_reporter();
 
     while(1)
     {
-        alarm(3);
-        sleep(3);
+      // init inotify
+      // begin watching for 5 sec
+      fd = inotify_init();
+
+      if ( fd < 0 ) {
+        perror( "inotify_init" );
+      }
+
+      wd = inotify_add_watch( fd, ".", IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO | IN_ATTRIB);
+
+      /*************************/
+        alarm(2);
+        sleep(2);
 		}
     return 0;
 }
