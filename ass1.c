@@ -13,14 +13,12 @@
 #include <sys/inotify.h>
 #include <inttypes.h>
 
-#include <cstdio>
+//#include <cstdio>
 #include <signal.h>
 #include <limits.h>
 #include <sys/inotify.h>
 #include <fcntl.h>
-#include <iostream>
-#include <fstream>
-#include <string>
+//#include <iostream>
 
 #include <sys/inotify.h>
 #include <stdio.h>
@@ -28,6 +26,12 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <inttypes.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <unistd.h>
 // inode -> change name, modify 1231412
 /*
 filename, type, time, inode
@@ -79,18 +83,40 @@ void change_reporter(){
 }
 
 void reporter(){
-  int check;
-
+  //int check;
+///////////////////////////////
   // result = select(FD_SETSIZE, &testfds, (fd_set *)0, (fd_set *)0, (struct timeval *) 0);
+  // /***********************////////
+  fd_set rfds;
+  struct timeval tv;
+  int retval;
 
-  check = select()
-  length = read( fd, buffer, EVENT_BUF_LEN);
-  printf("%d\n", length);
+  FD_ZERO(&rfds);
+  FD_SET(fd, &rfds);
+
+  tv.tv_sec = 0;
+  tv.tv_usec = 1;
+
+  retval = select(fd+1, &rfds, NULL, NULL, &tv);
+
+  printf( "1\n");
+
+  /************************/
+  //check = select()
+  //printf("%s\n", buffer);
+  if(retval > 0) {
+    length = read( fd, buffer, EVENT_BUF_LEN);
+  }
+  else{
+    return;
+  }
+
   /*checking for error*/
   if ( length < 0 ) {
     perror( "read" );
   }
-
+//noob
+////////////////////////////////
   /*actually read return the list of change events happens. Here, read the change event one by one and process it accordingly.*/
   while ( i < length ) {struct inotify_event *event = ( struct inotify_event * ) &buffer[ i ];     if ( event->len ) {
       if ( event->mask & IN_CREATE ) {
@@ -149,11 +175,11 @@ void reporter(){
     i += EVENT_SIZE + event->len;
   }
   /*removing the “/tmp” directory from the watch list.*/
-   inotify_rm_watch( fd, wd );
+   //inotify_rm_watch( fd, wd );
 
 
   /*closing the INOTIFY instance*/
-   close( fd );
+   //close( fd );
 }
 static void sig_handler(int signo){
 
@@ -191,7 +217,7 @@ int main(void)
 
     while(1)
     {
-      // init inotify
+      // init inotify////
       // begin watching for 5 sec
       fd = inotify_init();
 
