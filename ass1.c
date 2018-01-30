@@ -20,6 +20,8 @@
 #define EVENT_BUF_LEN ( 1024 * ( EVENT_SIZE + 16 ) )
 #define FILE_INFO_LEN ( sizeof(FINFO))
 
+static char *path;
+static int period;
 typedef struct{
   char name[256];
   int type; //0->dir, 1->reg, 2->other
@@ -190,11 +192,11 @@ void reporter(){
             if (old.type == new.type && old.inode == new.inode){
             }
             else{
-              print_del(new);
+              print_del(old);
             }
           }
           else{//in old but not in new
-            print_del(new);
+            print_del(old);
           }
         }
         else{// not in old
@@ -243,7 +245,12 @@ static void sig_handler(int signo){
         sigaddset(&signal_set, SIGUSR1);
         sigprocmask(0, &signal_set, NULL);
         system("date");
-        dir = opendir(".");
+        dir = opendir(path);
+        if (ENOENT == errno){
+      //directory does not exist
+          printf("Directory has been deleted!\n");
+          exit(1);
+    }
         dir_grabber(dir);
         closedir(dir);
         struct_move();
@@ -256,13 +263,18 @@ static void sig_handler(int signo){
         sigaddset(&signal_set, SIGUSR1);
         sigprocmask(0, &signal_set, NULL);
         system("date");
-        dir = opendir(".");
+        dir = opendir(path);
+        if (ENOENT == errno){
+      //directory does not exist
+          printf("Directory has been deleted!\n");
+          exit(1);
+    }
         dir_grabber(dir);
         closedir(dir);
         struct_move();
         reporter();
 				signal (SIGALRM, sig_handler);
-        alarm(3);
+        alarm(period);
         sigprocmask(1, &signal_set, NULL);
 
     }
@@ -271,7 +283,12 @@ static void sig_handler(int signo){
         sigaddset(&signal_set, SIGINT);
         sigprocmask(0, &signal_set, NULL);
         system("date");
-        dir = opendir(".");
+        dir = opendir(path);
+        if (ENOENT == errno){
+      //directory does not exist
+          printf("Directory has been deleted!\n");
+          exit(1);
+    }
         dir_grabber(dir);
         closedir(dir);
         struct_move();
@@ -288,15 +305,17 @@ static void sig_handler(int signo){
 		if the program needs to continue handling signals using a non-default handler.
 		*//////////
 }
-int main()
+int main(int argc, char *argv[])
 {
     int leng = 0;
-
+    period = atoi(argv[1]);
+    path = argv[2];
 
 		signal(SIGALRM, sig_handler);
     signal(SIGUSR1, sig_handler);
 		signal(SIGINT, sig_handler);
-		system("date");
+
+
     // init all struct array with null pointer
     old_file_info = (FINFO *)malloc(0);
     new_file_info = (FINFO *)malloc(0);
@@ -304,18 +323,24 @@ int main()
     change_file_info = (FINFO *)malloc(0);
 
     // init for first report
-    dir = opendir(".");
+    dir = opendir(path);
+    if (ENOENT == errno){
+      //directory does not exist
+      printf("Directory does not exist!\n");
+      exit(1);
+    }
+    system("date");
 		leng = dir_grabber(dir);
     struct_move();
     print_dir(new_file_info, new_dir_num);
     closedir(dir);
 
     fd = inotify_init();
-    wd = inotify_add_watch( fd, ".", IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO | IN_ATTRIB);
+    wd = inotify_add_watch( fd, path, IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO | IN_ATTRIB);
     if ( fd < 0 ) {
       perror( "inotify_init" );
     }
-    alarm(3);
+    alarm(period);
     while(1){
       ;
     }
