@@ -226,6 +226,26 @@ void reporter(){
           }
         }
       }
+      else if ( event->mask & IN_IGNORED) {
+        if (old.type != -1){// if in old
+          if (new.type != -1){//if in old & new
+            if (old.type == new.type && old.inode == new.inode){
+            }
+            else{
+              print_crt(new);
+            }
+          }
+          else{//in old but not in new
+          }
+        }
+        else{// not in old
+          if (new.type != -1){//if not in old but in new
+            print_crt(new);
+          }
+          else{//not in old and not in new
+          }
+        }
+      }
     }
     i += EVENT_SIZE + event->len;
   }
@@ -307,13 +327,17 @@ static void sig_handler(int signo){
 }
 int main(int argc, char *argv[])
 {
+    sigset_t mask_set;
     int leng = 0;
+
+
     period = atoi(argv[1]);
     path = argv[2];
 
 		signal(SIGALRM, sig_handler);
     signal(SIGUSR1, sig_handler);
 		signal(SIGINT, sig_handler);
+    sigemptyset(&mask_set);
 
 
     // init all struct array with null pointer
@@ -342,7 +366,7 @@ int main(int argc, char *argv[])
     }
     alarm(period);
     while(1){
-      ;
+      sigsuspend(&mask_set);
     }
     return 0;
 }
