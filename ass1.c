@@ -192,11 +192,11 @@ void reporter(){
             if (old.type == new.type && old.inode == new.inode){
             }
             else{
-              print_del(new);
+              print_del(old);
             }
           }
           else{//in old but not in new
-            print_del(new);
+            print_del(old);
           }
         }
         else{// not in old
@@ -226,6 +226,26 @@ void reporter(){
           }
         }
       }
+      else if ( event->mask & IN_IGNORED) {
+        if (old.type != -1){// if in old
+          if (new.type != -1){//if in old & new
+            if (old.type == new.type && old.inode == new.inode){
+            }
+            else{
+              print_crt(new);
+            }
+          }
+          else{//in old but not in new
+          }
+        }
+        else{// not in old
+          if (new.type != -1){//if not in old but in new
+            print_crt(new);
+          }
+          else{//not in old and not in new
+          }
+        }
+      }
     }
     i += EVENT_SIZE + event->len;
   }
@@ -235,6 +255,8 @@ void reporter(){
 //#define	SIG_UNBLOCK   1		 /* Unblock signals.  */
 //#define	SIG_SETMASK   2		 /* Set the set of blocked signals.  */
 
+
+//inoify reference : http://man7.org/linux/man-pages/man7/inotify.7.html
 static void sig_handler(int signo){
     sigset_t signal_set;
 
@@ -247,7 +269,7 @@ static void sig_handler(int signo){
         system("date");
         dir = opendir(path);
         if (ENOENT == errno){
-      //directory does not exist
+          //directory does not exist
           printf("Directory has been deleted!\n");
           exit(1);
     }
@@ -268,7 +290,7 @@ static void sig_handler(int signo){
       //directory does not exist
           printf("Directory has been deleted!\n");
           exit(1);
-    }
+        }
         dir_grabber(dir);
         closedir(dir);
         struct_move();
@@ -288,7 +310,7 @@ static void sig_handler(int signo){
       //directory does not exist
           printf("Directory has been deleted!\n");
           exit(1);
-    }
+        }
         dir_grabber(dir);
         closedir(dir);
         struct_move();
@@ -307,14 +329,18 @@ static void sig_handler(int signo){
 }
 int main(int argc, char *argv[])
 {
+    sigset_t mask_set;
     int leng = 0;
+
+
     period = atoi(argv[1]);
     path = argv[2];
-    
+
 		signal(SIGALRM, sig_handler);
     signal(SIGUSR1, sig_handler);
 		signal(SIGINT, sig_handler);
-		
+    sigemptyset(&mask_set);
+
 
     // init all struct array with null pointer
     old_file_info = (FINFO *)malloc(0);
@@ -341,8 +367,18 @@ int main(int argc, char *argv[])
       perror( "inotify_init" );
     }
     alarm(period);
+    
     while(1){
-      ;
+      dir = opendir(path);
+      if (ENOENT == errno){
+        //directory does not exist
+        printf("Directory has been deleted!\n");
+        exit(1);
+      }
+      closedir(dir);
+     //sigsuspend(&mask_set);
+
+
     }
     return 0;
 }
@@ -357,31 +393,34 @@ void struct_copy(FINFO *dst, FINFO *src,int length){
   }
 }
 
+//print the existed file in the dir
 void print_dir(FINFO *dir, int length){
   for (int i = 0; i < length; i++) {
-    printf("\"%s\" \"%s\"\n",
+    printf("%s %s\n",
            (dir[i].type == 4) ?  "d" :
            (dir[i].type == 8) ?  "+" :
            (1) ? "o" : "???",dir[i].name);
   }
 }
-
+//print create actions
 void print_crt(FINFO a_file){
-  printf("\"%s\" \"%s\"\n",
+  printf("%s %s\n",
          (a_file.type == 4) ?  "d" :
          (a_file.type == 8) ?  "+" :
          (1) ? "o" : "???",a_file.name);
 }
 
+//print delete actions
 void print_del(FINFO a_file){
-  printf("\"%s\" \"%s\"\n",
+  printf("%s %s\n",
          (a_file.type == 4) ?  "-" :
          (a_file.type == 8) ?  "-" :
          (1) ? "-" : "???",a_file.name);
 }
 
+//print modificate actions
 void print_mod(FINFO a_file){
-  printf("\"%s\" \"%s\"\n",
+  printf("%s %s\n",
          (a_file.type == 4) ?  "*" :
          (a_file.type == 8) ?  "*" :
          (1) ? "*" : "???",a_file.name);
